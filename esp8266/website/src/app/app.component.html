@@ -1,0 +1,24 @@
+<div class="column gap center padding-top-bottom padding-sides">
+	<h1>WiFi Setup</h1>
+	<div>Only 2.4 GHz networks are supported at this time.</div>
+	@if (loading && false) {
+		<mat-spinner/>
+	} @else {
+		<form class="column gap center" [formGroup]="formGroup">
+			<mat-form-field class="control" subscriptSizing="dynamic">
+				<mat-label>Network SSID</mat-label>
+				<input matInput autocomplete="off" spellcheck="false" (input)="status = 'none'" #ssid formControlName="ssid">
+			</mat-form-field>
+			<mat-form-field class="control" subscriptSizing="dynamic">
+				<mat-label>Password</mat-label>
+				<input matInput autocomplete="off" spellcheck="false" (input)="status = 'none'" #password formControlName="password" type="password">
+			</mat-form-field>
+			<button mat-flat-button class="control" (click)="save()" [disabled]="ssid.value === '' || password.value === '' || ssid.value === oldSsid && password.value === oldPassword">Save</button>
+		</form>
+		@if (status === "success") {
+			<div>Save successful!</div>
+		} @else if (status === "fail") {
+			<div>Save failed!</div>
+		}
+	}
+</div>

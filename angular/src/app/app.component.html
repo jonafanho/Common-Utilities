@@ -1,0 +1,14 @@
+<div class="column gap padding-top-bottom padding-sides">
+	<h1>Hello!</h1>
+	<div>This is an example page.</div>
+	<div class="row gap-small">
+		<button mat-button (click)="setTheme(false)" [disabled]="!isDarkTheme()">
+			<mat-icon>light_mode</mat-icon>
+			Light Mode
+		</button>
+		<button mat-button (click)="setTheme(true)" [disabled]="isDarkTheme()">
+			<mat-icon>dark_mode</mat-icon>
+			Dark Mode
+		</button>
+	</div>
+</div>

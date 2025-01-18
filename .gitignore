@@ -11,4 +11,5 @@ esp8266/website/.gitignore
 esp8266/website/*.json
 esp8266/website/src/styles.css
 esp8266/website/src/theme.scss
-esp8266/website/src/app/service/theme.service.ts
+esp8266/website/src/app/component/
+esp8266/website/src/app/service/

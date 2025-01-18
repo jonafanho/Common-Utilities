@@ -8,7 +8,6 @@
 
 #define DNS_PORT 53
 #define DEFAULT_HTML "index.html"
-#define SETUP_HTML "setup.html"
 #define WIFI_FILE "/wifi.txt"
 
 enum WiFiStatus
@@ -54,8 +53,8 @@ private:
 		dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 		dnsServer.start(DNS_PORT, "*", accessPointIp);
 
-		server.onNotFound([&]() { onRequest(SETUP_HTML); });
-		server.on("/api/wifi-save", HTTP_GET, [&]() {
+		server.onNotFound([&]() { onRequest(DEFAULT_HTML); });
+		server.on("/api/save", HTTP_GET, [&]() {
 			File wifiFile = LittleFS.open(WIFI_FILE, "w");
 			if (wifiFile) {
 				wifiFile.print(server.arg("ssid"));
@@ -70,7 +69,7 @@ private:
 				server.send(200, "application/json", "{\"success\":false}");
 			}
 		});
-		server.on("/api/wifi-read", HTTP_GET, [&]() {
+		server.on("/api/status", HTTP_GET, [&]() {
 			char ssid[256], password[256];
 			if (readWifiFile(ssid, password))
 			{
@@ -115,6 +114,7 @@ private:
 				else
 				{
 					server.onNotFound([&]() { onRequest(DEFAULT_HTML); });
+					server.on("/api/status", HTTP_GET, [&]() { server.send(200, "application/json", "{}"); });
 					(*bindServer)();
 					server.begin();
 

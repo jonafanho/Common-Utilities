@@ -5,6 +5,9 @@ import {FormControl, FormGroup, ReactiveFormsModule} from "@angular/forms";
 import {HttpClient} from "@angular/common/http";
 import {MatProgressSpinnerModule} from "@angular/material/progress-spinner";
 import {catchError, EMPTY} from "rxjs";
+import {MainComponent} from "./component/main/main.component";
+import {ThemeService} from "./service/theme.service";
+import {MatSlideToggleModule} from "@angular/material/slide-toggle";
 
 @Component({
 	selector: "app-root",
@@ -13,31 +16,41 @@ import {catchError, EMPTY} from "rxjs";
 		MatInputModule,
 		MatButtonModule,
 		MatProgressSpinnerModule,
+		MatSlideToggleModule,
+		MainComponent,
 	],
 	templateUrl: "./app.component.html",
 	styleUrls: ["./app.component.css"],
 })
 export class AppComponent {
-	protected status: "none" | "success" | "fail" = "none";
+	protected status: "main" | "none" | "success" | "fail" = "main";
 	protected loading = true;
 	protected oldSsid = "";
 	protected oldPassword = "";
 	protected readonly formGroup;
 
-	constructor(private readonly httpClient: HttpClient) {
+	constructor(private readonly httpClient: HttpClient, private readonly themeService: ThemeService) {
 		this.formGroup = new FormGroup({
 			ssid: new FormControl(""),
 			password: new FormControl(""),
 		});
-		this.httpClient.get<{ ssid: string, password: string }>("/api/wifi-read").pipe(catchError(() => {
+
+		this.httpClient.get<{ ssid: string, password: string }>("/api/status").pipe(catchError(() => {
 			this.status = "fail";
 			this.loading = false;
 			return EMPTY;
 		})).subscribe(({ssid, password}) => {
-			this.formGroup.get("ssid")?.setValue(ssid);
-			this.formGroup.get("password")?.setValue(password);
+			if (ssid === undefined || password === undefined) {
+				this.status = "main";
+			} else {
+				this.formGroup.get("ssid")?.setValue(ssid);
+				this.formGroup.get("password")?.setValue(password);
+				this.status = "none";
+			}
 			this.loading = false;
 		});
+
+		themeService.isDarkTheme();
 	}
 
 	save() {
@@ -46,7 +59,7 @@ export class AppComponent {
 
 		if (ssid && password) {
 			this.loading = true;
-			this.httpClient.get<{ success: boolean }>(`/api/wifi-save?ssid=${(encodeURIComponent(ssid))}&password=${(encodeURIComponent(password))}`).pipe(catchError(() => {
+			this.httpClient.get<{ success: boolean }>(`/api/save?ssid=${(encodeURIComponent(ssid))}&password=${(encodeURIComponent(password))}`).pipe(catchError(() => {
 				this.status = "fail";
 				this.loading = false;
 				return EMPTY;
@@ -59,5 +72,13 @@ export class AppComponent {
 				}
 			});
 		}
+	}
+
+	isDarkTheme() {
+		return this.themeService.isDarkTheme();
+	}
+
+	setTheme(isDarkTheme: boolean) {
+		this.themeService.setTheme(isDarkTheme);
 	}
 }

@@ -1,4 +1,5 @@
 #include <WiFiSetup.h>
+#include <HttpRequest.h>
 
 #define PIN_BUTTON D0
 
@@ -14,13 +15,31 @@ void setup()
 	Serial.begin(9600);
 	Serial.println();
 	Serial.println("Starting...");
-	wiFiSetup.setup([]() {}, [](WiFiStatus wiFiStatus, char *subtitle) {
-		Serial.println(subtitle);
-		if (wiFiStatus == WIFI_STATUS_FAILED)
-		{
-			Serial.println("Connection failed!");
-		}
+
+	bool isNormalConnection = wiFiSetup.setup();
+	server.on("/api/time", HTTP_GET, [&]() {
+		const char *url = "https://timeapi.io/api/time/current/zone?timeZone=Asia/Hong_Kong";
+		JsonDocument jsonDocument;
+		Serial.println(httpGet(url, &jsonDocument));
+		char response[256];
+		sprintf(response, "{\"time\":\"%s\"}", jsonDocument["dateTime"].as<const char*>());
+		server.send(200, "application/json", response);
 	});
+
+	if (isNormalConnection)
+	{
+		while (WiFi.status() != WL_CONNECTED)
+		{
+			delay(500);
+		}
+		Serial.print("Connected to WiFi: ");
+		Serial.println(WiFi.localIP().toString());
+	}
+	else
+	{
+		Serial.print("Access point mode: ");
+		Serial.println(ACCESS_POINT_IP.toString());
+	}
 }
 
 void loop()

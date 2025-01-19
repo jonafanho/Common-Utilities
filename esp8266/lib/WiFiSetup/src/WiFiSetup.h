@@ -7,7 +7,7 @@
 #include <LittleFS.h>
 
 #define DNS_PORT 53
-#define DEFAULT_HTML "index.html"
+#define DEFAULT_HTML "/index.html"
 #define WIFI_FILE "/wifi.txt"
 
 enum WiFiStatus
@@ -18,23 +18,27 @@ enum WiFiStatus
 	WIFI_STATUS_FAILED = 3
 };
 
+const IPAddress ACCESS_POINT_IP(192, 168, 0, 1);
+
 class WiFiSetup
 {
 public:
 	WiFiSetup(ESP8266WebServer &server1, DNSServer &dnsServer1, const char *apSsid, const uint8_t setupPin) : server(server1), dnsServer(dnsServer1), AP_SSID(apSsid), SETUP_PIN(setupPin) {}
 
-	void setup(void (*bindServer)(), void (*callback)(WiFiStatus, char *))
+	bool setup()
 	{
 		LittleFS.begin();
 		pinMode(SETUP_PIN, OUTPUT);
 
 		if (digitalRead(SETUP_PIN))
 		{
-			startAccessPoint(callback);
+			startAccessPoint();
+			return false;
 		}
 		else
 		{
-			connectToWifi(bindServer, callback);
+			connectToWifi();
+			return true;
 		}
 	}
 
@@ -44,19 +48,19 @@ private:
 	const char *AP_SSID;
 	const uint8_t SETUP_PIN;
 
-	void startAccessPoint(void (*callback)(WiFiStatus, char *))
+	void startAccessPoint()
 	{
 		WiFi.mode(WIFI_AP);
-		const IPAddress accessPointIp(192, 168, 0, 1);
-		WiFi.softAPConfig(accessPointIp, accessPointIp, IPAddress(255, 255, 255, 0));
+		WiFi.softAPConfig(ACCESS_POINT_IP, ACCESS_POINT_IP, IPAddress(255, 255, 255, 0));
 		WiFi.softAP(AP_SSID);
 		dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-		dnsServer.start(DNS_PORT, "*", accessPointIp);
+		dnsServer.start(DNS_PORT, "*", ACCESS_POINT_IP);
 
-		server.onNotFound([&]() { onRequest(DEFAULT_HTML); });
+		server.onNotFound([&]() { onRequest(); });
 		server.on("/api/save", HTTP_GET, [&]() {
 			File wifiFile = LittleFS.open(WIFI_FILE, "w");
-			if (wifiFile) {
+			if (wifiFile)
+			{
 				wifiFile.print(server.arg("ssid"));
 				wifiFile.print('\n');
 				wifiFile.print(server.arg("password"));
@@ -83,66 +87,32 @@ private:
 			}
 		});
 		server.begin();
-
-		delay(10);
-		(*callback)(WIFI_STATUS_AP, const_cast<char *>(accessPointIp.toString().c_str()));
-		delay(10);
-
-		while (true)
-		{
-			dnsServer.processNextRequest();
-			server.handleClient();
-		}
 	}
 
-	bool connectToWifi(void (*bindServer)(), void (*callback)(WiFiStatus, char *))
+	void connectToWifi()
 	{
 		char ssid[256], password[256];
 		if (readWifiFile(ssid, password))
 		{
-			delay(10);
-			(*callback)(WIFI_STATUS_CONNECTING, ssid);
-			delay(10);
-
 			WiFi.begin(ssid, password);
-			for (uint8_t i = 0; i < 10; i++)
-			{
-				if (WiFi.status() != WL_CONNECTED)
-				{
-					delay(2000);
-				}
-				else
-				{
-					server.onNotFound([&]() { onRequest(DEFAULT_HTML); });
-					server.on("/api/status", HTTP_GET, [&]() { server.send(200, "application/json", "{}"); });
-					(*bindServer)();
-					server.begin();
-
-					delay(10);
-					(*callback)(WIFI_STATUS_CONNECTED, const_cast<char *>(WiFi.localIP().toString().c_str()));
-					delay(10);
-
-					return true;
-				}
-			}
 		}
 
-		delay(10);
-		(*callback)(WIFI_STATUS_FAILED, new char[0]);
-		delay(10);
-
-		return false;
+		server.onNotFound([&]() { onRequest(); });
+		server.on("/api/status", HTTP_GET, [&]() { server.send(200, "application/json", "{}"); });
+		server.begin();
 	}
 
-	void onRequest(const char *defaultPath)
+	void onRequest()
 	{
-		char path[64];
-		sprintf(path, "%s", server.uri().c_str());
-		if (strcmp(path, "/") == 0 || !LittleFS.exists(path))
+		String path = server.uri();
+		File file;
+
+		if (path.equals("/") || !LittleFS.exists(path))
 		{
-			sprintf(path, "/%s", defaultPath);
+			path = DEFAULT_HTML;
 		}
-		File file = LittleFS.open(path, "r");
+
+		file = LittleFS.open(path, "r");
 		server.streamFile(file, getContentType(path));
 		file.close();
 	}

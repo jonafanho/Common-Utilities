@@ -36,18 +36,16 @@ export class AppComponent {
 		});
 
 		this.httpClient.get<{ ssid: string, password: string }>("/api/status").pipe(catchError(() => {
-			this.status = "fail";
-			this.loading = false;
+			this.setStatus("fail");
 			return EMPTY;
 		})).subscribe(({ssid, password}) => {
 			if (ssid === undefined || password === undefined) {
-				this.status = "main";
+				this.setStatus("main");
 			} else {
 				this.formGroup.get("ssid")?.setValue(ssid);
 				this.formGroup.get("password")?.setValue(password);
-				this.status = "none";
+				this.setStatus("none");
 			}
-			this.loading = false;
 		});
 
 		themeService.isDarkTheme();
@@ -60,12 +58,10 @@ export class AppComponent {
 		if (ssid && password) {
 			this.loading = true;
 			this.httpClient.get<{ success: boolean }>(`/api/save?ssid=${(encodeURIComponent(ssid))}&password=${(encodeURIComponent(password))}`).pipe(catchError(() => {
-				this.status = "fail";
-				this.loading = false;
+				this.setStatus("fail");
 				return EMPTY;
 			})).subscribe(({success}) => {
-				this.status = success ? "success" : "fail";
-				this.loading = false;
+				this.setStatus(success ? "success" : "fail");
 				if (success) {
 					this.oldSsid = ssid;
 					this.oldPassword = password;
@@ -80,5 +76,13 @@ export class AppComponent {
 
 	setTheme(isDarkTheme: boolean) {
 		this.themeService.setTheme(isDarkTheme);
+	}
+
+	private setStatus(status: "main" | "none" | "success" | "fail" = "main") {
+		this.status = status;
+		this.loading = false;
+		if (status !== "main") {
+			document.title = "WiFi Setup";
+		}
 	}
 }

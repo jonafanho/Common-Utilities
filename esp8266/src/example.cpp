@@ -1,5 +1,13 @@
-#include <WiFiSetup.h>
+#include <CustomScheduler.h>
 #include <HttpRequest.h>
+#include <Settings.h>
+#include <WiFiSetup.h>
+
+#include <ArduinoJson.h>
+#include <ESP8266HTTPClient.h>
+#include <ESP8266WebServer.h>
+#include <LittleFS.h>
+#include <WiFiClientSecureBearSSL.h>
 
 #define PIN_BUTTON D0
 #define ACCESS_POINT_SSID "Test"
@@ -7,12 +15,14 @@
 ESP8266WebServer server(80);
 DNSServer dnsServer;
 WiFiSetup wiFiSetup(server, dnsServer, ACCESS_POINT_SSID, PIN_BUTTON);
+CustomScheduler customScheduler;
 
 void setup()
 {
 	Serial.begin(9600);
 	Serial.println();
 	Serial.println("Starting...");
+	LittleFS.begin();
 
 	bool isNormalConnection = wiFiSetup.setup();
 	server.on("/api/clear-settings", HTTP_GET, [&]() {
@@ -41,6 +51,14 @@ void setup()
 		sprintf(response, "{\"%s\":\"%s\"}", key, settings.read(key, ""));
 		server.send(200, "application/json", response);
 	});
+	server.on("/api/add-schedule", HTTP_GET, [&]() {
+		customScheduler.add(server.arg("hour").toInt(), server.arg("minute").toInt(), server.arg("second").toInt(), server.arg("channel").toInt());
+		Settings::sendToServer(server);
+	});
+	server.on("/api/remove-schedule", HTTP_GET, [&]() {
+		customScheduler.remove(server.arg("hour").toInt(), server.arg("minute").toInt(), server.arg("second").toInt(), server.arg("channel").toInt());
+		Settings::sendToServer(server);
+	});
 
 	if (isNormalConnection)
 	{
@@ -56,10 +74,18 @@ void setup()
 		Serial.print("Access point mode: ");
 		Serial.println(ACCESS_POINT_IP.toString());
 	}
+
+	customScheduler.setup();
 }
 
 void loop()
 {
 	dnsServer.processNextRequest();
 	server.handleClient();
+
+	int16_t customSchedulerChannel = customScheduler.tick();
+	if (customSchedulerChannel >= 0)
+	{
+		Serial.println(customSchedulerChannel);
+	}
 }

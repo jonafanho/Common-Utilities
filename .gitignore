@@ -6,10 +6,3 @@ godot/
 openscad/
 
 angular/.gitignore
-esp8266/data/
-esp8266/website/.gitignore
-esp8266/website/*.json
-esp8266/website/src/styles.css
-esp8266/website/src/theme.scss
-esp8266/website/src/app/component/
-esp8266/website/src/app/service/

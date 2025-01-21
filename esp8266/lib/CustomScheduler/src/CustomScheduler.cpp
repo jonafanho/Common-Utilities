@@ -1,5 +1,10 @@
 #include "CustomScheduler.h"
+#include <HttpRequest.h>
 #include <Settings.h>
+#include <NTPClient.h>
+
+WiFiUDP wiFiUDP;
+NTPClient ntpClient(wiFiUDP, "pool.ntp.org");
 
 void CustomScheduler::setup()
 {
@@ -11,35 +16,58 @@ void CustomScheduler::setup()
 		channels[i] = scheduleArray[i]["channel"];
 		count++;
 	}
+
+	ntpClient.begin();
+	ntpClient.update();
+	previousTime = getTime(ntpClient.getHours(), ntpClient.getMinutes(), ntpClient.getSeconds());
 }
 
-int16_t CustomScheduler::tick()
+uint8_t CustomScheduler::tick()
 {
-	return -1;
+	ntpClient.update();
+	int time = getTime(ntpClient.getHours(), ntpClient.getMinutes(), ntpClient.getSeconds());
+	uint8_t total = 0;
+
+	if (previousTime != time)
+	{
+		for (uint8_t i = 0; i < count; i++)
+		{
+			if ((previousTime < times[i] || previousTime > time) && time >= times[i])
+			{
+				total = total | (1 << (channels[i] - 1));
+			}
+		}
+	}
+
+	previousTime = time;
+	return total;
 }
 
 void CustomScheduler::add(uint8_t hour, uint8_t minute, uint8_t second, uint8_t channel)
 {
-	int time = (hour * 3600 + minute * 60 + second) * 1000;
-	for (uint8_t i = 0; i < count; i++)
+	if (channel > 0 && channel <= MAX_CHANNELS)
 	{
-		if (time == times[i] && channel == channels[i])
+		int time = getTime(hour, minute, second);
+		for (uint8_t i = 0; i < count; i++)
 		{
-			return;
+			if (time == times[i] && channel == channels[i])
+			{
+				return;
+			}
 		}
-	}
-	if (count < MAX_COUNT)
-	{
-		times[count] = time;
-		channels[count] = channel;
-		count++;
-		writeSettings();
+		if (count < MAX_COUNT)
+		{
+			times[count] = time;
+			channels[count] = channel;
+			count++;
+			writeSettings();
+		}
 	}
 }
 
 void CustomScheduler::remove(uint8_t hour, uint8_t minute, uint8_t second, uint8_t channel)
 {
-	int time = (hour * 3600 + minute * 60 + second) * 1000;
+	int time = getTime(hour, minute, second);
 	for (uint8_t i = 0; i < count; i++)
 	{
 		if (time == times[i] && channel == channels[i])
@@ -69,4 +97,9 @@ void CustomScheduler::writeSettings()
 	mainObject["custom-scheduler"] = scheduleArray;
 	Settings settings;
 	settings.write(mainObject);
+}
+
+int CustomScheduler::getTime(uint8_t hour, uint8_t minute, uint8_t second)
+{
+	return (hour * 3600 + minute * 60 + second) * 1000;
 }

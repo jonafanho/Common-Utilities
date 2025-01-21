@@ -1,5 +1,4 @@
 #include <CustomScheduler.h>
-#include <HttpRequest.h>
 #include <Settings.h>
 #include <WiFiSetup.h>
 
@@ -28,14 +27,6 @@ void setup()
 	server.on("/api/clear-settings", HTTP_GET, [&]() {
 		Settings::clear();
 		server.send(200, "application/json", "{}");
-	});
-	server.on("/api/time", HTTP_GET, [&]() {
-		const char *url = "https://timeapi.io/api/time/current/zone?timeZone=Asia/Hong_Kong";
-		JsonDocument jsonDocument;
-		httpGet(url, &jsonDocument);
-		char response[256];
-		sprintf(response, "{\"time\":\"%s\"}", jsonDocument["dateTime"].as<const char *>());
-		server.send(200, "application/json", response);
 	});
 	server.on("/api/read-settings-number", HTTP_GET, [&]() {
 		const char *key = server.arg("field").c_str();
@@ -83,8 +74,8 @@ void loop()
 	dnsServer.processNextRequest();
 	server.handleClient();
 
-	int16_t customSchedulerChannel = customScheduler.tick();
-	if (customSchedulerChannel >= 0)
+	uint8_t customSchedulerChannel = customScheduler.tick();
+	if (customSchedulerChannel > 0)
 	{
 		Serial.println(customSchedulerChannel);
 	}

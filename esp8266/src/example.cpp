@@ -2,11 +2,7 @@
 #include <Settings.h>
 #include <WiFiSetup.h>
 
-#include <ArduinoJson.h>
-#include <ESP8266HTTPClient.h>
-#include <ESP8266WebServer.h>
 #include <LittleFS.h>
-#include <WiFiClientSecureBearSSL.h>
 
 #define PIN_BUTTON D0
 #define ACCESS_POINT_SSID "Test"

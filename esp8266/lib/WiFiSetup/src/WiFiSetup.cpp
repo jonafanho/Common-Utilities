@@ -36,7 +36,7 @@ void WiFiSetup::startAccessPoint()
 void WiFiSetup::connectToWifi()
 {
 	Settings settings;
-	WiFi.begin(settings.read("wifi-ssid", ""), settings.read("wifi-password", ""));
+	WiFi.begin(settings.read("wiFiSsid", ""), settings.read("wiFiPassword", ""));
 	startServer();
 }
 

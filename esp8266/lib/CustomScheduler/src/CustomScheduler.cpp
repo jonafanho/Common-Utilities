@@ -9,7 +9,7 @@ NTPClient ntpClient(wiFiUDP, "pool.ntp.org");
 void CustomScheduler::setup()
 {
 	Settings settings;
-	JsonArray scheduleArray = settings.read("custom-scheduler", JsonArray());
+	JsonArray scheduleArray = settings.read("customScheduler", JsonArray());
 	for (uint8_t i = 0; i < std::min((uint8_t)scheduleArray.size(), (uint8_t)MAX_COUNT); i++)
 	{
 		times[i] = scheduleArray[i]["time"];
@@ -94,7 +94,7 @@ void CustomScheduler::writeSettings()
 	}
 
 	JsonDocument mainObject;
-	mainObject["custom-scheduler"] = scheduleArray;
+	mainObject["customScheduler"] = scheduleArray;
 	Settings settings;
 	settings.write(mainObject);
 }

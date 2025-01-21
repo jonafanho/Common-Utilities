@@ -5,4 +5,5 @@
 godot/
 openscad/
 
+esp8266/.gitignore
 angular/.gitignore
